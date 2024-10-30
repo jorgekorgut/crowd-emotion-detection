@@ -1,24 +1,78 @@
+using UnityEngine;
+using System;
+
+using Emgu.CV;
+using Emgu.CV.Dnn;
+using Emgu.CV.Util;
+
+using System.Drawing;
+using Emgu.CV.CvEnum;
+using Emgu.CV.Structure;
+
 class FaceDetector
 {
+    private int inputNumberOfChannels = 3;
+    private int inputWidth;
+    private int inputHeight;
+
+    private float confThreshold;
+    private float nmsThreshold;
+    private bool isLoaded = false;
+    private Net net;
     public FaceDetector(string modelpath, float confThreshold, float nmsThreshold, int width, int height)
     {
         this.confThreshold = confThreshold;
         this.nmsThreshold = nmsThreshold;
-        //this.net = readNet(modelpath);
-        this.inpWidth = width;
-        this.inpHeight = height;
+        this.inputWidth = width;
+        this.inputHeight = height;
+
+        readNet(modelpath);
+    }
+
+    private void readNet(string path)
+    {
+        try
+        {
+            this.net = DnnInvoke.ReadNetFromONNX(path);
+            isLoaded = true;
+        }
+        catch (Exception e)
+        {
+            Debug.Log(e.Message);
+        }
     }
 
     //public void detect(Mat& frame)
-    public void detect()
+    public void Detect(Mat frame)
     {
+        string[] outputLayers = new string[]
+        {
+            "scores", "boxes"
+        };
+
+        if (!isLoaded)
+        {
+            Debug.Log("Model is not loaded.");
+            return;
+        }
+
+        Mat preprocessedFrame = Preprocess(frame);
+
+        Debug.Log(preprocessedFrame.Size);
+
+        VectorOfMat netOutput = new VectorOfMat();
+        net.SetInput(preprocessedFrame);
+        //net.Forward(netOutput, outputLayers);
+
+        Postprocess(netOutput);
+
         // int newh = 0, neww = 0, padh = 0, padw = 0;
         // Mat dst = this->resize_image(srcimg, &newh, &neww, &padh, &padw);
         // Mat blob;
         // blobFromImage(dst, blob, 1 / 255.0, Size(this->inpWidth, this->inpHeight), Scalar(0, 0, 0), true, false);
         // this->net.setInput(blob);
         // vector<Mat> outs;
-        // ///net.enableWinograd(false);  ////如果是opencv4.7，那就需要加上这一行
+        // ///net.enableWinograd(false);  ////如果是opencv4.7，那就需要加上这一行   
         // this->net.forward(outs, this->net.getUnconnectedOutLayersNames());
 
         // /////generate proposals
@@ -42,6 +96,32 @@ class FaceDetector
         //     this->drawPred(confidences[idx], box.x, box.y,
         //         box.x + box.width, box.y + box.height, srcimg, landmarks[idx]);
         // }
+    }
+
+    private Mat Preprocess(Mat img)
+    {
+        Mat rgbImage = new Mat(new Size(inputWidth, inputHeight), img.Depth, inputNumberOfChannels);
+
+        var conversion = img.NumberOfChannels == 4 ? ColorConversion.Bgra2Rgb : ColorConversion.Bgr2Rgb;
+        CvInvoke.CvtColor(img, rgbImage, conversion);
+
+        Mat inputBlob = DnnInvoke.BlobFromImage(
+            rgbImage, 1.0 / 128,
+            new Size(inputWidth, inputHeight),
+            new MCvScalar(127, 127, 127), true
+        );
+        
+        return inputBlob;
+    }
+
+    private void Postprocess(VectorOfMat outBlobs)
+    {
+        //Debug.Log(outBlobs.Size);
+        //Mat confidencesMat = outBlobs[0];
+        //Mat boxesMat = outBlobs[1];
+
+        //Debug.Log(boxesMat.ToString());
+
     }
 
     //private Mat resize_image(Mat srcimg, int* newh, int* neww, int* padh, int* padw)
@@ -79,10 +159,6 @@ class FaceDetector
     }
 
     private const bool keep_ratio = true;
-    private int inpWidth = 640;
-    private int inpHeight = 640;
-    private float confThreshold;
-    private float nmsThreshold;
     private const int num_class = 1;
     private const int reg_max = 16;
     //private Net net;

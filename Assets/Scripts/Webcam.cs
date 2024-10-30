@@ -6,37 +6,31 @@ using UnityEngine.UI;
 
 public class Webcam
 {
-    private RawImage rawImage;
+    public WebCamTexture texture;
 
-    private WebCamTexture camTexture;
-
-    private bool camAvailable = false;
+    //private bool camAvailable = false;
 
     private bool isFrontCam = false;
 
-    public Webcam(RawImage rawImage)
+    public Webcam()
     {
-        this.rawImage = rawImage;
-
         WebCamDevice[] devices = WebCamTexture.devices;
         if (devices.Length == 0)
         {
             Debug.Log("No camera detected");
-            camAvailable = false;
+            //camAvailable = false;
             return;
         }
-        camTexture = new WebCamTexture(devices[0].name, Screen.width, Screen.height);
-        if (camTexture == null)
+        texture = new WebCamTexture(devices[0].name, Screen.width, Screen.height);
+        if (texture == null)
         {
             Debug.Log("Unable to open camera");
             return;
         }
 
         isFrontCam = devices[0].isFrontFacing;
-        camTexture.Play();
-        camAvailable = true;
-
-        this.rawImage.texture = camTexture;
+        texture.Play();
+        //camAvailable = true;
     }
 
     public void Update()
