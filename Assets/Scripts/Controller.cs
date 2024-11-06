@@ -14,25 +14,40 @@ public class Controller : MonoBehaviour
     public RawImage outputImage;
     private Webcam webcam;
     private FaceDetector faceDetector;
+
+
     void Start()
     {
-        int width = outputImage.texture.width;
-        int height =  outputImage.texture.height;
-
         this.webcam = new Webcam();
-        this.faceDetector = new FaceDetector("Assets/Resources/FaceDetection/yolov8-lite-s.onnx", 0.45f, 0.5f, width, height);
+        this.faceDetector = new FaceDetector("Assets/Resources/FaceDetection/yolov8-lite-s.onnx", 0.45f, 0.5f);
 
-        outputImage.texture = this.webcam.texture;
+        //outputImage.texture = new Texture2D(width, height);
+        //outputImage.texture = this.webcam.texture;
+        //processFrame();
     }
 
+    private int counter = 0;
     void Update()
     {
-        processFrame();
+        if (counter == 100)
+        {
+            processFrame();
+        }
+        counter++;
+        //processFrame();
     }
 
     private void processFrame()
     {
+
         Mat matImage = ImageUtils.ConvertWebCamTextureToMat(webcam.texture, DepthType.Cv8U, 8, 4);
         faceDetector.Detect(matImage);
+
+        //outputImage.texture = ImageUtils.ConvertMatToTexture(matImage);
+
+        //outputImage.texture = webcam.texture;
+        //outputImage.texture = 
+        //Debug.Log(matImage.Size);
+        //faceDetector.Detect(matImage);
     }
 }

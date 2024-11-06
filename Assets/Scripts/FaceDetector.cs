@@ -9,22 +9,77 @@ using System.Drawing;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 
+class Point
+{
+    public float x, y;
+    public Point(float x, float y)
+    {
+        this.x = x;
+        this.y = y;
+    }
+}
+
+class BBox
+{
+    public Point lt, rb;
+
+    public BBox(Point lt, Point rb)
+    {
+        this.lt = lt;
+        this.rb = rb;
+    }
+}
+
+class Landmark
+{
+    public Point[] points;
+    public Landmark(Point[] points)
+    {
+        this.points = points;
+    }
+}
+
+class Face
+{
+    public BBox bbox;
+    public Landmark landmark;
+    public float confidence;
+    public Face(BBox bbox, Landmark landmark, float confidence)
+    {
+        this.bbox = bbox;
+        this.landmark = landmark;
+        this.confidence = confidence;
+    }
+
+    public void ToOriginalCoordinates(int paddingX, int paddingY, float modelToOriginalRatioX, float modelToOriginalRatioY)
+    {
+        float xMin = Math.Max((bbox.lt.x - paddingX) * modelToOriginalRatioX, 0);
+        float yMin = Math.Max((bbox.lt.y - paddingY) * modelToOriginalRatioY, 0);
+        float xMax = Math.Min((bbox.rb.x + paddingX) * modelToOriginalRatioX, 0);
+        float yMax = Math.Min((bbox.rb.y + paddingY) * modelToOriginalRatioY, 0);
+
+        foreach(Point point in landmark.points)
+        {
+            point.x = (point.x + paddingX) * modelToOriginalRatioX;
+            point.y = (point.y + paddingY) * modelToOriginalRatioY;
+        }
+    }
+
+}
+
 class FaceDetector
 {
     private int inputNumberOfChannels = 3;
-    private int inputWidth;
-    private int inputHeight;
-
+    private int inputImageWidth = 640;
+    private int inputImageHeight = 640;
     private float confThreshold;
     private float nmsThreshold;
     private bool isLoaded = false;
     private Net net;
-    public FaceDetector(string modelpath, float confThreshold, float nmsThreshold, int width, int height)
+    public FaceDetector(string modelpath, float confThreshold, float nmsThreshold)
     {
         this.confThreshold = confThreshold;
         this.nmsThreshold = nmsThreshold;
-        this.inputWidth = width;
-        this.inputHeight = height;
 
         readNet(modelpath);
     }
@@ -43,7 +98,7 @@ class FaceDetector
     }
 
     //public void detect(Mat& frame)
-    public void Detect(Mat frame)
+    public void Detect(Mat imageInput)
     {
         string[] outputLayers = new string[]
         {
@@ -56,15 +111,37 @@ class FaceDetector
             return;
         }
 
-        Mat preprocessedFrame = Preprocess(frame);
+        Mat preprocessedFrame = Preprocess(imageInput);
 
-        Debug.Log(preprocessedFrame.Size);
+        // Print 5x5 (r,g,b,a) first elements of matrix
+
+
+        //Print array dimensions
+
+        //Debug.Log(data.GetValue(0,0,0,0));
+
+        // Array data = preprocessedFrame.GetData();
+        // // Write 5 rows and 5 columns of the matrix nicely formatted into a string
+
+        // string matrixString = "";
+        // for (int i = 0; i < 5; i++)
+        // {
+        //     for (int j = 0; j < 5; j++)
+        //     {
+        //         matrixString += $"({data.GetValue(0, 0, j, i)} {data.GetValue(0, 1, j, i)} {data.GetValue(0, 2, j, i)})";
+        //     }
+        //     matrixString += "\n";
+        // }
+        // Debug.Log(matrixString);
 
         VectorOfMat netOutput = new VectorOfMat();
         net.SetInput(preprocessedFrame);
-        //net.Forward(netOutput, outputLayers);
+        net.Forward(netOutput, net.UnconnectedOutLayersNames);
 
-        Postprocess(netOutput);
+        // Print string[] nicely formatted
+        // Debug.Log(string.Join(", ", net.UnconnectedOutLayersNames));
+
+        Postprocess(netOutput, imageInput.Width, imageInput.Height);
 
         // int newh = 0, neww = 0, padh = 0, padw = 0;
         // Mat dst = this->resize_image(srcimg, &newh, &neww, &padh, &padw);
@@ -100,27 +177,158 @@ class FaceDetector
 
     private Mat Preprocess(Mat img)
     {
-        Mat rgbImage = new Mat(new Size(inputWidth, inputHeight), img.Depth, inputNumberOfChannels);
-
-        var conversion = img.NumberOfChannels == 4 ? ColorConversion.Bgra2Rgb : ColorConversion.Bgr2Rgb;
-        CvInvoke.CvtColor(img, rgbImage, conversion);
+        Mat rgbImage = new Mat(new Size(inputImageWidth, inputImageHeight), img.Depth, inputNumberOfChannels);
+        CvInvoke.CvtColor(img, rgbImage, ColorConversion.Rgba2Rgb);
 
         Mat inputBlob = DnnInvoke.BlobFromImage(
-            rgbImage, 1.0 / 128,
-            new Size(inputWidth, inputHeight),
-            new MCvScalar(127, 127, 127), true
+            rgbImage,
+            1.0 / 255,
+            new Size(inputImageWidth, inputImageHeight),
+            new MCvScalar(0, 0, 0),
+            false, // SwapRB
+            false // Crop
         );
-        
+
         return inputBlob;
     }
 
-    private void Postprocess(VectorOfMat outBlobs)
+    private void Postprocess(VectorOfMat modelOutput, int imageInputWidth, int imageInputHeight)
     {
-        //Debug.Log(outBlobs.Size);
-        //Mat confidencesMat = outBlobs[0];
+        float modelToOriginalRatioX = (float)imageInput.Cols / inputImageWidth;
+        float modelToOriginalRatioY = (float)imageInput.Rows / inputImageHeight;
+        int paddingX = 0;
+        int paddingY = 0;
+
+        Mat mat0 = modelOutput[0];
+        Mat mat1 = modelOutput[1];
+        Mat mat2 = modelOutput[2];
+
+        Array<Face> faces0 = CreatePropositionsFaceArray(mat0);
+        Array<Face> faces1 = CreatePropositionsFaceArray(mat1);
+        Array<Face> faces2 = CreatePropositionsFaceArray(mat2);
+
+        Array<Face> faces = faces0.Concat(faces1).Concat(faces2).ToArray();
+        foreach (Face currentFace in faces)
+        {
+            currentFace.ToOriginalCoordinates(paddingX, paddingY, modelToOriginalRatioX, modelToOriginalRatioY);
+        }
+
+        //Get mat0 metadata, dimensions
+        //Debug.Log("mat0 dims: " + mat0.Dims);
+
+        // Access 0,0,0,0 element from Emgu.CV.Mat
+        int[] mat0Dimensions = mat0.SizeOfDimension;
+        Debug.Log("mat0 Dimensions: " + string.Join(", ", mat0Dimensions));
+
+        int[] mat1Dimensions = mat1.SizeOfDimension;
+        Debug.Log("mat1 Dimensions: " + string.Join(", ", mat1Dimensions));
+
+        int[] mat2Dimensions = mat2.SizeOfDimension;
+        Debug.Log("mat2 Dimensions: " + string.Join(", ", mat2Dimensions));
+
+
+
+        //Debug.Log("mat0.Size.Height: " + mat0.Size.Height);
+
+        //Array arr0 = mat0.GetData();
+        //int arr0Dims = arr0.Rank;
+
+        //Debug.Log("mat0: " + mat0.Size[2] + "|" + mat0.Size[3]);
+        //Debug.Log("mat1: " + mat1.Size[2] + "|" + mat1.Size[3]);
+        //Debug.Log("mat2: " + mat2.Size[2] + "|" + mat2.Size[3]);
+
         //Mat boxesMat = outBlobs[1];
 
         //Debug.Log(boxesMat.ToString());
+
+    }
+
+    private Array<Face> CreatePropositionsFaceArray(Mat mat)
+    {
+        //TODO: What is reg_max
+        int maxRegion = 16;
+
+        int[] dimensions = mat.SizeOfDimension;
+        const int featureHeight = mat[2];
+        const int featureWidth = mat[3];
+
+        const int area = featureHeight * featureWidth;
+        const int stride = (int)Math.Ceiling((float)inputImageHeight / featureHeight); // Movement of the kernel
+
+        Array data = mat.GetData();
+
+        IntPtr ptr = mat.DataPointer;
+
+        IntPtr ptrClassification = ptr + area * maxRegion * 4;
+
+        IntPtr ptrLandmarks = ptr + area * (maxRegion * 4 + 1);
+
+        for (int fHeightIndex = 0; fHeightIndex < featureHeight; fHeightIndex++)
+        {
+            for (int fWidthIndex = 0; fWidthIndex < featureWidth; fWidthIndex++)
+            {
+                const int index = fHeightIndex * feat_w + fWidthIndex;
+
+                float conf = ptrClassification[area + index];
+
+                float sigmoidConf = MathUtils.Sigmoid(conf);
+
+                // Select bounding box only if confidence is higher than threshold
+                if (sigmoidConf > this.confThreshold)
+                {
+                    // TODO : What this part does?
+                    float predictedBBoxDistanceLTBR[4];
+                    float[] dfl_value = new float[maxRegion];
+
+                    // TODO : Find distances ?
+                    for (int currentVertex = 0; currentVertex < 4; currentVertex++)
+                    {
+                        for (int n = 0; n < maxRegion; n++)
+                        {
+                            dfl_value[n] = ptr[(currentVertex * maxRegion + n) * area + index];
+                        }
+
+                        float[] dfl_softmax = MathUtils.Softmax(dfl_value);
+
+                        float dis = 0.f;
+                        for (int n = 0; n < maxRegion; n++)
+                        {
+                            dis += n * dfl_softmax[n];
+                        }
+
+                        predictedBBoxDistanceLTBR[currentVertex] = dis * stride;
+                    }
+
+                    // Calculate boundingbox points
+                    float centerX = (fWidthIndex + 0.5f) * stride;
+                    float centerY = (fHeightIndex + 0.5f) * stride;
+
+                    float xMin = cx - pred_ltrb[0];
+                    float yMin = cy - pred_ltrb[1];
+                    float xMax = cx + pred_ltrb[2];
+                    float yMax = cy + pred_ltrb[3];
+
+                    Point[] landMarks = new Point[5];
+                    for (int currentLandmarkIndex = 0; currentLandmarkIndex < 5; currentLandmarkIndex++)
+                    {
+                        float x = (ptrLandmarks[(k * 3) * area + index] * 2 + fWidthIndex) * stride; 
+                        float y = (ptrLandmarks[(k * 3 + 1) * area + index] * 2 + fHeightIndex) * stride; 
+
+                        landMarks[k] = new Point(x, y);
+                    }
+
+                    Face face = new Face(
+                        new BBox(new Point(xMin, yMin), new Point(xMax, yMax)),
+                        landMarks,
+                        sigmoidConf
+                    );
+                    // float xMin = Math.Max((cx - pred_ltrb[0] - paddingX) * modelToOriginalRatioX, 0.f);
+                    // float yMin = Math.Max((cy - pred_ltrb[1] - paddingY) * modelToOriginalRatioY, 0.f);
+                    // float xMax = Math.Min((cx + pred_ltrb[2] + paddingX) * modelToOriginalRatioX, float(imgw - 1));
+                    // float yMax = Math.Min((cy + pred_ltrb[3] + paddingY) * modelToOriginalRatioY, float(imgh - 1));
+                }
+            }
+        }
 
     }
 
