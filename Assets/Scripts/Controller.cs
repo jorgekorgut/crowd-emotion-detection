@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Drawing;
 
 using Emgu.CV;
 using Emgu.CV.Util;
@@ -41,9 +42,22 @@ public class Controller : MonoBehaviour
     {
 
         Mat matImage = ImageUtils.ConvertWebCamTextureToMat(webcam.texture, DepthType.Cv8U, 8, 4);
-        faceDetector.Detect(matImage);
+        List<Face> faces = faceDetector.Detect(matImage);
 
-        //outputImage.texture = ImageUtils.ConvertMatToTexture(matImage);
+        foreach (Face face in faces)
+        {
+            float x = face.bbox.lt.x;
+            float y = face.bbox.lt.y;
+
+            float width = face.bbox.rb.x - face.bbox.lt.x;
+            float height = face.bbox.rb.y - face.bbox.lt.y;
+
+            //Construct a rectangle from the bounding box of face
+            Rectangle rect = new Rectangle((int)x, (int)y, (int)width, (int)height);
+
+            CvInvoke.Rectangle(matImage, rect, new MCvScalar(0, 255, 0), 2);
+        }
+        outputImage.texture = ImageUtils.ConvertMatToTexture(matImage);
 
         //outputImage.texture = webcam.texture;
         //outputImage.texture = 

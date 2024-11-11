@@ -119,7 +119,7 @@ class FaceDetector
     }
 
     //public void detect(Mat& frame)
-    public void Detect(Mat imageInput)
+    public List<Face> Detect(Mat imageInput)
     {
         string[] outputLayers = new string[]
         {
@@ -129,7 +129,7 @@ class FaceDetector
         if (!isLoaded)
         {
             Debug.Log("Model is not loaded.");
-            return;
+            return new List<Face>();
         }
 
         Mat preprocessedFrame = Preprocess(imageInput);
@@ -162,8 +162,9 @@ class FaceDetector
         // Print string[] nicely formatted
         // Debug.Log(string.Join(", ", net.UnconnectedOutLayersNames));
 
-        Postprocess(netOutput, imageInput.Width, imageInput.Height);
+        List<Face> faces = Postprocess(netOutput, imageInput.Width, imageInput.Height);
 
+        return faces;
         // int newh = 0, neww = 0, padh = 0, padw = 0;
         // Mat dst = this->resize_image(srcimg, &newh, &neww, &padh, &padw);
         // Mat blob;
@@ -213,7 +214,7 @@ class FaceDetector
         return inputBlob;
     }
 
-    private void Postprocess(VectorOfMat modelOutput, int imageInputWidth, int imageInputHeight)
+    private List<Face> Postprocess(VectorOfMat modelOutput, int imageInputWidth, int imageInputHeight)
     {
         float modelToOriginalRatioX = (float)imageInputWidth / inputImageWidth;
         float modelToOriginalRatioY = (float)imageInputHeight / inputImageHeight;
@@ -232,27 +233,9 @@ class FaceDetector
         foreach (Face currentFace in faces)
         {
             currentFace.ToOriginalCoordinates(paddingX, paddingY, modelToOriginalRatioX, modelToOriginalRatioY);
-            //Debug.Log(currentFace.ToString());
         }
 
-        //Get mat0 metadata, dimensions
-        //Debug.Log("mat0 dims: " + mat0.Dims);
-
-        // Access 0,0,0,0 element from Emgu.CV.Mat
-
-        //Debug.Log("mat0.Size.Height: " + mat0.Size.Height);
-
-        //Array arr0 = mat0.GetData();
-        //int arr0Dims = arr0.Rank;
-
-        //Debug.Log("mat0: " + mat0.Size[2] + "|" + mat0.Size[3]);
-        //Debug.Log("mat1: " + mat1.Size[2] + "|" + mat1.Size[3]);
-        //Debug.Log("mat2: " + mat2.Size[2] + "|" + mat2.Size[3]);
-
-        //Mat boxesMat = outBlobs[1];
-
-        //Debug.Log(boxesMat.ToString());
-
+        return faces;
     }
 
     private List<Face> CreatePropositionsFaceArray(Mat mat)
@@ -261,6 +244,7 @@ class FaceDetector
 
         //TODO: What is reg_max
         int maxRegion = 16;
+        int classCount = 1;
 
         int[] dimensions = mat.SizeOfDimension;
         int featureHeight = dimensions[2];
@@ -272,45 +256,31 @@ class FaceDetector
 
         Array data = mat.GetData();
 
-        Debug.Log(data.GetValue(0, 0, 0, 0));
-
-        IntPtr ptr = mat.DataPointer;
-
-        IntPtr ptrClassification = ptr + area * maxRegion * 4;
-
-        IntPtr ptrLandmarks = ptr + area * (maxRegion * 4 + 1);
-
         for (int fHeightIndex = 0; fHeightIndex < featureHeight; fHeightIndex++)
         {
             for (int fWidthIndex = 0; fWidthIndex < featureWidth; fWidthIndex++)
             {
-                int index = fHeightIndex * featureWidth + fWidthIndex;
+                float confidence = (float)data.GetValue(0, maxRegion * 4, fWidthIndex, fHeightIndex);
 
-                float conf = Marshal.PtrToStructure<float>(ptrClassification + (area + index) * sizeof(float));
-
-                float sigmoidConf = MathUtils.Sigmoid(conf);
-
-                // Select bounding box only if confidence is higher than threshold
-                if (sigmoidConf > this.confThreshold)
+                float sigmoidConfidence = MathUtils.Sigmoid(confidence);
+                if (sigmoidConfidence > this.confThreshold)
                 {
-                    // TODO : What this part does?
                     float[] predictedBBoxDistanceLTBR = new float[4];
                     float[] dfl_value = new float[maxRegion];
 
-                    // TODO : Find distances ?
                     for (int currentVertex = 0; currentVertex < 4; currentVertex++)
                     {
-                        for (int n = 0; n < maxRegion; n++)
+                        for (int currentRegion = 0; currentRegion < maxRegion; currentRegion++)
                         {
-                            dfl_value[n] = Marshal.PtrToStructure<float>(ptr + (currentVertex * maxRegion + n) * area + index);
+                            dfl_value[currentRegion] = (float)data.GetValue(0, currentVertex * maxRegion + currentRegion, fWidthIndex, fHeightIndex);
                         }
 
                         float[] dfl_softmax = MathUtils.Softmax(dfl_value);
 
                         float dis = 0.0f;
-                        for (int n = 0; n < maxRegion; n++)
+                        for (int currentRegion = 0; currentRegion < maxRegion; currentRegion++)
                         {
-                            dis += n * dfl_softmax[n];
+                            dis += currentRegion * dfl_softmax[currentRegion];
                         }
 
                         predictedBBoxDistanceLTBR[currentVertex] = dis * stride;
@@ -328,26 +298,23 @@ class FaceDetector
                     Point[] landMarks = new Point[5];
                     for (int currentLandmarkIndex = 0; currentLandmarkIndex < 5; currentLandmarkIndex++)
                     {
-                        float x = Marshal.PtrToStructure<float>((ptrLandmarks + ((currentLandmarkIndex * 3) * area + index) * 2 + fWidthIndex)) * stride;
-                        float y = Marshal.PtrToStructure<float>((ptrLandmarks + ((currentLandmarkIndex * 3 + 1) * area + index) * 2 + fHeightIndex)) * stride;
-
+                        float x = ((float)data.GetValue(0, maxRegion * 4 + classCount + currentLandmarkIndex * 3, fWidthIndex, fHeightIndex)* 2 + fWidthIndex) * stride;
+                        float y = ((float)data.GetValue(0, maxRegion * 4 + classCount + currentLandmarkIndex * 3 + 1, fWidthIndex, fHeightIndex)* 2 + fWidthIndex) * stride;
+                        
                         landMarks[currentLandmarkIndex] = new Point(x, y);
                     }
 
                     Face face = new Face(
                         new BBox(new Point(xMin, yMin), new Point(xMax, yMax)),
                         new Landmark(landMarks),
-                        sigmoidConf
+                        sigmoidConfidence
                     );
 
                     faces.Add(face);
-                    // float xMin = Math.Max((cx - pred_ltrb[0] - paddingX) * modelToOriginalRatioX, 0.f);
-                    // float yMin = Math.Max((cy - pred_ltrb[1] - paddingY) * modelToOriginalRatioY, 0.f);
-                    // float xMax = Math.Min((cx + pred_ltrb[2] + paddingX) * modelToOriginalRatioX, float(imgw - 1));
-                    // float yMax = Math.Min((cy + pred_ltrb[3] + paddingY) * modelToOriginalRatioY, float(imgh - 1));
                 }
             }
         }
+
         return faces;
     }
 
