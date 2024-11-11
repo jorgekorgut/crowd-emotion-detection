@@ -6,8 +6,11 @@ using Emgu.CV.Dnn;
 using Emgu.CV.Util;
 
 using System.Drawing;
+using System.Collections.Generic;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
+using System.Linq;
+using System.Runtime.InteropServices;
 
 class Point
 {
@@ -58,11 +61,29 @@ class Face
         float xMax = Math.Min((bbox.rb.x + paddingX) * modelToOriginalRatioX, 0);
         float yMax = Math.Min((bbox.rb.y + paddingY) * modelToOriginalRatioY, 0);
 
-        foreach(Point point in landmark.points)
+        bbox.lt.x = xMin;
+        bbox.lt.y = yMin;
+        bbox.rb.x = xMax;
+        bbox.rb.y = yMax;
+
+        foreach (Point point in landmark.points)
         {
             point.x = (point.x + paddingX) * modelToOriginalRatioX;
             point.y = (point.y + paddingY) * modelToOriginalRatioY;
         }
+    }
+
+    public override string ToString()
+    {
+        string faceString = $"Face: {bbox.lt.x}, {bbox.lt.y}, {bbox.rb.x}, {bbox.rb.y}\n";
+        faceString += $"Confidence: {confidence}\n";
+        foreach (Point point in landmark.points)
+        {
+
+            faceString += $"Landmark: {point.x}, {point.y}\n";
+
+        }
+        return faceString;
     }
 
 }
@@ -194,8 +215,8 @@ class FaceDetector
 
     private void Postprocess(VectorOfMat modelOutput, int imageInputWidth, int imageInputHeight)
     {
-        float modelToOriginalRatioX = (float)imageInput.Cols / inputImageWidth;
-        float modelToOriginalRatioY = (float)imageInput.Rows / inputImageHeight;
+        float modelToOriginalRatioX = (float)imageInputWidth / inputImageWidth;
+        float modelToOriginalRatioY = (float)imageInputHeight / inputImageHeight;
         int paddingX = 0;
         int paddingY = 0;
 
@@ -203,30 +224,21 @@ class FaceDetector
         Mat mat1 = modelOutput[1];
         Mat mat2 = modelOutput[2];
 
-        Array<Face> faces0 = CreatePropositionsFaceArray(mat0);
-        Array<Face> faces1 = CreatePropositionsFaceArray(mat1);
-        Array<Face> faces2 = CreatePropositionsFaceArray(mat2);
+        List<Face> faces0 = CreatePropositionsFaceArray(mat0);
+        List<Face> faces1 = CreatePropositionsFaceArray(mat1);
+        List<Face> faces2 = CreatePropositionsFaceArray(mat2);
 
-        Array<Face> faces = faces0.Concat(faces1).Concat(faces2).ToArray();
+        List<Face> faces = faces0.Concat(faces1).Concat(faces2).ToList();
         foreach (Face currentFace in faces)
         {
             currentFace.ToOriginalCoordinates(paddingX, paddingY, modelToOriginalRatioX, modelToOriginalRatioY);
+            //Debug.Log(currentFace.ToString());
         }
 
         //Get mat0 metadata, dimensions
         //Debug.Log("mat0 dims: " + mat0.Dims);
 
         // Access 0,0,0,0 element from Emgu.CV.Mat
-        int[] mat0Dimensions = mat0.SizeOfDimension;
-        Debug.Log("mat0 Dimensions: " + string.Join(", ", mat0Dimensions));
-
-        int[] mat1Dimensions = mat1.SizeOfDimension;
-        Debug.Log("mat1 Dimensions: " + string.Join(", ", mat1Dimensions));
-
-        int[] mat2Dimensions = mat2.SizeOfDimension;
-        Debug.Log("mat2 Dimensions: " + string.Join(", ", mat2Dimensions));
-
-
 
         //Debug.Log("mat0.Size.Height: " + mat0.Size.Height);
 
@@ -243,19 +255,24 @@ class FaceDetector
 
     }
 
-    private Array<Face> CreatePropositionsFaceArray(Mat mat)
+    private List<Face> CreatePropositionsFaceArray(Mat mat)
     {
+        List<Face> faces = new List<Face>();
+
         //TODO: What is reg_max
         int maxRegion = 16;
 
         int[] dimensions = mat.SizeOfDimension;
-        const int featureHeight = mat[2];
-        const int featureWidth = mat[3];
+        int featureHeight = dimensions[2];
+        int featureWidth = dimensions[3];
 
-        const int area = featureHeight * featureWidth;
-        const int stride = (int)Math.Ceiling((float)inputImageHeight / featureHeight); // Movement of the kernel
+        int area = featureHeight * featureWidth;
+
+        int stride = (int)Math.Ceiling((float)inputImageHeight / featureHeight); // Movement of the kernel
 
         Array data = mat.GetData();
+
+        Debug.Log(data.GetValue(0, 0, 0, 0));
 
         IntPtr ptr = mat.DataPointer;
 
@@ -267,9 +284,9 @@ class FaceDetector
         {
             for (int fWidthIndex = 0; fWidthIndex < featureWidth; fWidthIndex++)
             {
-                const int index = fHeightIndex * feat_w + fWidthIndex;
+                int index = fHeightIndex * featureWidth + fWidthIndex;
 
-                float conf = ptrClassification[area + index];
+                float conf = Marshal.PtrToStructure<float>(ptrClassification + (area + index) * sizeof(float));
 
                 float sigmoidConf = MathUtils.Sigmoid(conf);
 
@@ -277,7 +294,7 @@ class FaceDetector
                 if (sigmoidConf > this.confThreshold)
                 {
                     // TODO : What this part does?
-                    float predictedBBoxDistanceLTBR[4];
+                    float[] predictedBBoxDistanceLTBR = new float[4];
                     float[] dfl_value = new float[maxRegion];
 
                     // TODO : Find distances ?
@@ -285,12 +302,12 @@ class FaceDetector
                     {
                         for (int n = 0; n < maxRegion; n++)
                         {
-                            dfl_value[n] = ptr[(currentVertex * maxRegion + n) * area + index];
+                            dfl_value[n] = Marshal.PtrToStructure<float>(ptr + (currentVertex * maxRegion + n) * area + index);
                         }
 
                         float[] dfl_softmax = MathUtils.Softmax(dfl_value);
 
-                        float dis = 0.f;
+                        float dis = 0.0f;
                         for (int n = 0; n < maxRegion; n++)
                         {
                             dis += n * dfl_softmax[n];
@@ -303,25 +320,27 @@ class FaceDetector
                     float centerX = (fWidthIndex + 0.5f) * stride;
                     float centerY = (fHeightIndex + 0.5f) * stride;
 
-                    float xMin = cx - pred_ltrb[0];
-                    float yMin = cy - pred_ltrb[1];
-                    float xMax = cx + pred_ltrb[2];
-                    float yMax = cy + pred_ltrb[3];
+                    float xMin = centerX - predictedBBoxDistanceLTBR[0];
+                    float yMin = centerY - predictedBBoxDistanceLTBR[1];
+                    float xMax = centerX + predictedBBoxDistanceLTBR[2];
+                    float yMax = centerY + predictedBBoxDistanceLTBR[3];
 
                     Point[] landMarks = new Point[5];
                     for (int currentLandmarkIndex = 0; currentLandmarkIndex < 5; currentLandmarkIndex++)
                     {
-                        float x = (ptrLandmarks[(k * 3) * area + index] * 2 + fWidthIndex) * stride; 
-                        float y = (ptrLandmarks[(k * 3 + 1) * area + index] * 2 + fHeightIndex) * stride; 
+                        float x = Marshal.PtrToStructure<float>((ptrLandmarks + ((currentLandmarkIndex * 3) * area + index) * 2 + fWidthIndex)) * stride;
+                        float y = Marshal.PtrToStructure<float>((ptrLandmarks + ((currentLandmarkIndex * 3 + 1) * area + index) * 2 + fHeightIndex)) * stride;
 
-                        landMarks[k] = new Point(x, y);
+                        landMarks[currentLandmarkIndex] = new Point(x, y);
                     }
 
                     Face face = new Face(
                         new BBox(new Point(xMin, yMin), new Point(xMax, yMax)),
-                        landMarks,
+                        new Landmark(landMarks),
                         sigmoidConf
                     );
+
+                    faces.Add(face);
                     // float xMin = Math.Max((cx - pred_ltrb[0] - paddingX) * modelToOriginalRatioX, 0.f);
                     // float yMin = Math.Max((cy - pred_ltrb[1] - paddingY) * modelToOriginalRatioY, 0.f);
                     // float xMax = Math.Min((cx + pred_ltrb[2] + paddingX) * modelToOriginalRatioX, float(imgw - 1));
@@ -329,7 +348,7 @@ class FaceDetector
                 }
             }
         }
-
+        return faces;
     }
 
     //private Mat resize_image(Mat srcimg, int* newh, int* neww, int* padh, int* padw)
