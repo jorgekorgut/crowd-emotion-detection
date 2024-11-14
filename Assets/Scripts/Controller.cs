@@ -16,11 +16,15 @@ public class Controller : MonoBehaviour
     private Webcam webcam;
     private FaceDetector faceDetector;
 
+    private Mat testImage;
 
     void Start()
     {
         this.webcam = new Webcam();
         this.faceDetector = new FaceDetector("Assets/Resources/FaceDetection/yolov8-lite-s.onnx", 0.45f, 0.5f);
+
+        // Load jpg image on unity and convert it to mat
+        testImage = ImageUtils.LoadJPGToMat("Assets/Resources/Images/femme.jpg");
 
         //outputImage.texture = new Texture2D(width, height);
         //outputImage.texture = this.webcam.texture;
@@ -30,18 +34,20 @@ public class Controller : MonoBehaviour
     private int counter = 0;
     void Update()
     {
+        /*
         if (counter == 100)
         {
             processFrame();
         }
         counter++;
-        //processFrame();
+        */
+        processFrame();
     }
 
     private void processFrame()
     {
-
         Mat matImage = ImageUtils.ConvertWebCamTextureToMat(webcam.texture, DepthType.Cv8U, 8, 4);
+        //Mat matImage = testImage;
         List<Face> faces = faceDetector.Detect(matImage);
 
         foreach (Face face in faces)
@@ -56,7 +62,16 @@ public class Controller : MonoBehaviour
             Rectangle rect = new Rectangle((int)x, (int)y, (int)width, (int)height);
 
             CvInvoke.Rectangle(matImage, rect, new MCvScalar(0, 255, 0), 2);
+
+            //Print the landmakrs of the face
+            foreach (Point landmark in face.landmark.points)
+            {
+                CvInvoke.Circle(matImage, new System.Drawing.Point((int)landmark.x, (int)landmark.y), 2, new MCvScalar(0, 0, 255), 2);
+            }
         }
+        
+        // Print mat dimensions
+        //Debug.Log(testImage.Size);
         outputImage.texture = ImageUtils.ConvertMatToTexture(matImage);
 
         //outputImage.texture = webcam.texture;

@@ -11,6 +11,7 @@ using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.IO;
 
 class Point
 {
@@ -54,22 +55,24 @@ class Face
         this.confidence = confidence;
     }
 
-    public void ToOriginalCoordinates(int paddingX, int paddingY, float modelToOriginalRatioX, float modelToOriginalRatioY)
+    public void ToOriginalCoordinates(int paddingX, int paddingY, float modelToOriginalRatioX, float modelToOriginalRatioY, int imageInputWidth, int imageInputHeight)
     {
         float xMin = Math.Max((bbox.lt.x - paddingX) * modelToOriginalRatioX, 0);
         float yMin = Math.Max((bbox.lt.y - paddingY) * modelToOriginalRatioY, 0);
-        float xMax = Math.Min((bbox.rb.x + paddingX) * modelToOriginalRatioX, 0);
-        float yMax = Math.Min((bbox.rb.y + paddingY) * modelToOriginalRatioY, 0);
+        float xMax = Math.Min((bbox.rb.x + paddingX) * modelToOriginalRatioX, imageInputWidth - 1);
+        float yMax = Math.Min((bbox.rb.y + paddingY) * modelToOriginalRatioY, imageInputHeight - 1);
 
         bbox.lt.x = xMin;
-        bbox.lt.y = yMin;
+        bbox.lt.y = imageInputHeight - yMin;
         bbox.rb.x = xMax;
-        bbox.rb.y = yMax;
+        bbox.rb.y = imageInputHeight - yMax; //Invert y axis for Unity coordinates
 
         foreach (Point point in landmark.points)
         {
             point.x = (point.x + paddingX) * modelToOriginalRatioX;
             point.y = (point.y + paddingY) * modelToOriginalRatioY;
+
+            //point.y = imageInputHeight - point.y; //Invert y axis for Unity coordinates
         }
     }
 
@@ -91,8 +94,8 @@ class Face
 class FaceDetector
 {
     private int inputNumberOfChannels = 3;
-    private int inputImageWidth = 640;
-    private int inputImageHeight = 640;
+    private int modelImageWidth = 640;
+    private int modelImageHeight = 640;
     private float confThreshold;
     private float nmsThreshold;
     private bool isLoaded = false;
@@ -199,25 +202,27 @@ class FaceDetector
 
     private Mat Preprocess(Mat img)
     {
-        Mat rgbImage = new Mat(new Size(inputImageWidth, inputImageHeight), img.Depth, inputNumberOfChannels);
+        Mat rgbImage = new Mat(new Size(modelImageWidth, modelImageHeight), img.Depth, inputNumberOfChannels);
         CvInvoke.CvtColor(img, rgbImage, ColorConversion.Rgba2Rgb);
-
+        CvInvoke.Flip(rgbImage, rgbImage, FlipType.Vertical); // Flip image because the model and unity have different coordinate systems (y = -y)
+        
         Mat inputBlob = DnnInvoke.BlobFromImage(
             rgbImage,
             1.0 / 255,
-            new Size(inputImageWidth, inputImageHeight),
+            new Size(modelImageWidth, modelImageHeight),
             new MCvScalar(0, 0, 0),
             false, // SwapRB
             false // Crop
         );
+
 
         return inputBlob;
     }
 
     private List<Face> Postprocess(VectorOfMat modelOutput, int imageInputWidth, int imageInputHeight)
     {
-        float modelToOriginalRatioX = (float)imageInputWidth / inputImageWidth;
-        float modelToOriginalRatioY = (float)imageInputHeight / inputImageHeight;
+        float modelToOriginalRatioX = (float)imageInputWidth / modelImageWidth;
+        float modelToOriginalRatioY = (float)imageInputHeight / modelImageHeight;
         int paddingX = 0;
         int paddingY = 0;
 
@@ -228,11 +233,11 @@ class FaceDetector
         List<Face> faces0 = CreatePropositionsFaceArray(mat0);
         List<Face> faces1 = CreatePropositionsFaceArray(mat1);
         List<Face> faces2 = CreatePropositionsFaceArray(mat2);
-
+        
         List<Face> faces = faces0.Concat(faces1).Concat(faces2).ToList();
         foreach (Face currentFace in faces)
         {
-            currentFace.ToOriginalCoordinates(paddingX, paddingY, modelToOriginalRatioX, modelToOriginalRatioY);
+            currentFace.ToOriginalCoordinates(paddingX, paddingY, modelToOriginalRatioX, modelToOriginalRatioY, imageInputWidth, imageInputHeight);
         }
 
         return faces;
@@ -241,8 +246,8 @@ class FaceDetector
     private List<Face> CreatePropositionsFaceArray(Mat mat)
     {
         List<Face> faces = new List<Face>();
+        Array data = mat.GetData();
 
-        //TODO: What is reg_max
         int maxRegion = 16;
         int classCount = 1;
 
@@ -250,17 +255,13 @@ class FaceDetector
         int featureHeight = dimensions[2];
         int featureWidth = dimensions[3];
 
-        int area = featureHeight * featureWidth;
-
-        int stride = (int)Math.Ceiling((float)inputImageHeight / featureHeight); // Movement of the kernel
-
-        Array data = mat.GetData();
+        int stride = (int)Math.Ceiling((float)modelImageHeight / featureHeight); // Movement of the kernel
 
         for (int fHeightIndex = 0; fHeightIndex < featureHeight; fHeightIndex++)
         {
             for (int fWidthIndex = 0; fWidthIndex < featureWidth; fWidthIndex++)
             {
-                float confidence = (float)data.GetValue(0, maxRegion * 4, fWidthIndex, fHeightIndex);
+                float confidence = (float)data.GetValue(0, maxRegion * 4, fHeightIndex, fWidthIndex);
 
                 float sigmoidConfidence = MathUtils.Sigmoid(confidence);
                 if (sigmoidConfidence > this.confThreshold)
@@ -272,7 +273,7 @@ class FaceDetector
                     {
                         for (int currentRegion = 0; currentRegion < maxRegion; currentRegion++)
                         {
-                            dfl_value[currentRegion] = (float)data.GetValue(0, currentVertex * maxRegion + currentRegion, fWidthIndex, fHeightIndex);
+                            dfl_value[currentRegion] = (float)data.GetValue(0, currentVertex * maxRegion + currentRegion, fHeightIndex, fWidthIndex);
                         }
 
                         float[] dfl_softmax = MathUtils.Softmax(dfl_value);
@@ -298,9 +299,9 @@ class FaceDetector
                     Point[] landMarks = new Point[5];
                     for (int currentLandmarkIndex = 0; currentLandmarkIndex < 5; currentLandmarkIndex++)
                     {
-                        float x = ((float)data.GetValue(0, maxRegion * 4 + classCount + currentLandmarkIndex * 3, fWidthIndex, fHeightIndex)* 2 + fWidthIndex) * stride;
-                        float y = ((float)data.GetValue(0, maxRegion * 4 + classCount + currentLandmarkIndex * 3 + 1, fWidthIndex, fHeightIndex)* 2 + fWidthIndex) * stride;
-                        
+                        float x = ((float)data.GetValue(0, maxRegion * 4 + classCount + currentLandmarkIndex * 3, fHeightIndex, fWidthIndex) * 2 + fWidthIndex) * stride;
+                        float y = ((float)data.GetValue(0, maxRegion * 4 + classCount + currentLandmarkIndex * 3 + 1, fHeightIndex, fWidthIndex) * 2 + fWidthIndex) * stride;
+
                         landMarks[currentLandmarkIndex] = new Point(x, y);
                     }
 

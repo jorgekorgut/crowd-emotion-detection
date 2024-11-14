@@ -35,14 +35,30 @@ public static class ImageUtils
         return null;
     }
 
+    public static Mat LoadJPGToMat(string path)
+    {
+        Mat img = CvInvoke.Imread(path, ImreadModes.Color);
+        //invert r and b channels
+        CvInvoke.CvtColor(img, img, ColorConversion.Bgr2Rgb);
+        //flip image y
+        CvInvoke.Flip(img, img, FlipType.Vertical);
+        return img;
+    }
+
     public static Texture2D ConvertMatToTexture(Mat sourceMat)
     {
         //Get the height and width of the Mat 
         int imgHeight = sourceMat.Height;
         int imgWidth = sourceMat.Width;
         int imgChannels = sourceMat.NumberOfChannels;
+        TextureFormat format = TextureFormat.RGBA32;
 
-        Texture2D texture = new Texture2D(imgWidth, imgHeight, TextureFormat.RGBA32, false);
+        if(imgChannels == 3)
+        {
+            format = TextureFormat.RGB24;
+        }
+
+        Texture2D texture = new Texture2D(imgWidth, imgHeight, format, false);
         byte[] imageData = new byte[imgHeight * imgWidth * imgChannels];
         System.Runtime.InteropServices.Marshal.Copy(sourceMat.DataPointer, imageData, 0, imageData.Length);
         
