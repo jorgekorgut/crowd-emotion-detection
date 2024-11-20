@@ -5,11 +5,56 @@ using Emgu.CV;
 using Emgu.CV.Util;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
+using System.Drawing;
 
 public static class ImageUtils
 {
+
+    public static Mat CropImage(Mat image, Rectangle cropRect)
+    {
+        Mat copy = image.Clone();
+
+        Rectangle cropHeight = new Rectangle(0, cropRect.Y, image.Width, cropRect.Height);
+
+        Mat imageCroppedHeight = new Mat(copy, cropHeight);
+
+        Mat transposedImage = new Mat(imageCroppedHeight.Height, imageCroppedHeight.Width, imageCroppedHeight.Depth, imageCroppedHeight.NumberOfChannels);
+
+        CvInvoke.Transpose(imageCroppedHeight, transposedImage);
+
+        Rectangle cropWidth = new Rectangle(0, cropRect.X, imageCroppedHeight.Height, cropRect.Width);
+
+        Mat imageCroppedWidth = new Mat(transposedImage, cropWidth);
+        
+        Mat finalImage = new Mat(cropRect.Height, cropRect.Width, imageCroppedWidth.Depth, imageCroppedWidth.NumberOfChannels);
+
+        CvInvoke.Transpose(imageCroppedWidth, finalImage);
+
+        return finalImage;
+    }
     public static Mat ConvertWebCamTextureToMat(WebCamTexture frame, DepthType depthType, int nBytePerPixel, int channels)
     {
+        if (frame == null)
+        {
+            return null;
+        }
+        /*
+                Mat mat = new Mat(frame.height, frame.width, depthType, channels);
+                Color32[] pixels = frame.GetPixels32();
+                byte[] data = new byte[pixels.Length * nBytePerPixel];
+                for (int i = 0; i < pixels.Length; i++)
+                {
+                    data[i * nBytePerPixel] = pixels[i].r;
+                    data[i * nBytePerPixel + 1] = pixels[i].g;
+                    data[i * nBytePerPixel + 2] = pixels[i].b;
+                    if (nBytePerPixel == 4)
+                    {
+                        data[i * nBytePerPixel + 3] = pixels[i].a;
+                    }
+                }
+                mat.SetTo(data);
+                return mat;
+                */
         try
         {
             Image<Rgba, Byte> img = new Image<Rgba, byte>(frame.width, frame.height);
@@ -25,6 +70,8 @@ public static class ImageUtils
                     img[r, c] = new Rgba(pixel.r, pixel.g, pixel.b, pixel.a);
                 }
             }
+
+            //System.Runtime.InteropServices.Marshal.Copy(sourceMat.DataPointer, imageData, 0, imageData.Length);
 
             return img.Mat;
         }
@@ -53,7 +100,7 @@ public static class ImageUtils
         int imgChannels = sourceMat.NumberOfChannels;
         TextureFormat format = TextureFormat.RGBA32;
 
-        if(imgChannels == 3)
+        if (imgChannels == 3)
         {
             format = TextureFormat.RGB24;
         }
@@ -61,7 +108,7 @@ public static class ImageUtils
         Texture2D texture = new Texture2D(imgWidth, imgHeight, format, false);
         byte[] imageData = new byte[imgHeight * imgWidth * imgChannels];
         System.Runtime.InteropServices.Marshal.Copy(sourceMat.DataPointer, imageData, 0, imageData.Length);
-        
+
         texture.LoadRawTextureData(imageData);
         texture.Apply();
 

@@ -1,0 +1,1 @@
+yolov11n-face.onnx : 400 ms 

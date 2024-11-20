@@ -38,4 +38,21 @@ public static class FileUtils{
             }
         }
     }
+
+    public static Mat[] LoadEmotionsImages()
+    {
+        Mat[] emotionImages = new Mat[8];
+        for (int i = 0; i < 8; i++)
+        {
+            emotionImages[i] = ImageUtils.LoadJPGToMat($"Assets/Resources/EmotionImages/{Emotion.emotions[i]}.png");
+        }
+
+        // Resize image to be 48x48
+        for (int i = 0; i < 8; i++)
+        {
+            CvInvoke.Resize(emotionImages[i], emotionImages[i], new Size(48, 48));
+        }
+
+        return emotionImages;
+    }
 }
