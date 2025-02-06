@@ -39,8 +39,17 @@ public static class FileUtils{
         }
     }
 
-    public static Mat[] LoadEmotionsImages()
+    public static Sprite[] LoadEmotionsImages()
     {
+        Sprite[] emotionImages = new Sprite[8];
+        for (int i = 0; i < 8; i++)
+        {
+            emotionImages[i] = Resources.Load<Sprite>($"EmotionImages/{Emotion.emotions[i]}");
+        }
+
+        return emotionImages;
+
+        /*
         Mat[] emotionImages = new Mat[8];
         for (int i = 0; i < 8; i++)
         {
@@ -54,5 +63,6 @@ public static class FileUtils{
         }
 
         return emotionImages;
+        */
     }
 }

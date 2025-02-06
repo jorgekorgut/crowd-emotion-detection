@@ -89,6 +89,12 @@ namespace FaceDetectorFast
                 faceString += $"Landmark: {point.x}, {point.y}\n";
 
             }
+            
+            if(emotion != null)
+            {
+                faceString += $"Emotion: {emotion.GetEmotionText()}\n";
+            }
+
             return faceString;
         }
 

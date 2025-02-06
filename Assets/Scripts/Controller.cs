@@ -16,17 +16,22 @@ using FaceDetectorFast;
 public class Controller : MonoBehaviour
 {
     public RawImage outputImage;
+
+    public Canvas UI;
     private Webcam webcam;
     private FaceDetector faceDetector;
     private EmotionDetector emotionDetector;
     private Mat detectedFace;
-    private int detectionUpdateRateMs = 500;
+    private int detectionUpdateRateMs = 1000;
 
     private int lastTimeUpdateDetection = 0;
 
     private List<Face> faces;
 
-    private Mat[] emotionImages;
+    private Sprite[] emotionImages;
+
+    private float matToTextureCoordinatesX = 1;
+    private float matToTextureCoordinatesY = 1;
 
     void Start()
     {
@@ -40,61 +45,115 @@ public class Controller : MonoBehaviour
         // Load the emotions images
         emotionImages = FileUtils.LoadEmotionsImages();
 
-        //outputImage.texture = new Texture2D(width, height);
-        //outputImage.texture = this.webcam.texture;
+        outputImage.texture = this.webcam.texture;
+
+        matToTextureCoordinatesX = (float)outputImage.rectTransform.rect.width / (float)webcam.texture.width;
+        matToTextureCoordinatesY = (float)outputImage.rectTransform.rect.height / (float)webcam.texture.height;
         //processFrame();
+
     }
     void Update()
     {
-        Mat matImage = ImageUtils.ConvertWebCamTextureToMat(webcam.texture, DepthType.Cv8U, 8, 4);
+
         // process frame every detectionUpdateRateMs with a the current Time
         if (Time.time * 1000 - lastTimeUpdateDetection > detectionUpdateRateMs)
         {
-            faces = faceDetector.Detect(matImage);
 
-            if (faces != null)
+            Mat matImage = ImageUtils.ConvertWebCamTextureToMat(webcam.texture, DepthType.Cv8U, 8, 4);
+
+            Task.Run(() =>
             {
-                // Parallel for each face detected, detect the emotion
-                Parallel.ForEach(faces, face =>
+                faces = faceDetector.Detect(matImage);
+
+                if (faces != null)
                 {
-                    int x = (int)face.bbox.lt.x;
-                    int y = (int)face.bbox.rb.y; // y starts from the bottom of the image
-                    int width = (int)(face.bbox.rb.x - face.bbox.lt.x);
-                    int height = (int)(face.bbox.lt.y - face.bbox.rb.y);
+                    // Parallel for each face detected, detect the emotion
+                    Parallel.ForEach(faces, face =>
+                    {
+                        int x = (int)face.bbox.lt.x;
+                        int y = (int)face.bbox.rb.y; // y starts from the bottom of the image
+                        int width = (int)(face.bbox.rb.x - face.bbox.lt.x);
+                        int height = (int)(face.bbox.lt.y - face.bbox.rb.y);
 
-                    Rectangle bbox = new Rectangle(x, y, width, height);
+                        Rectangle bbox = new Rectangle(x, y, width, height);
 
-                    Mat detectedFace = ImageUtils.CropImage(matImage, bbox);
+                        Mat detectedFace = ImageUtils.CropImage(matImage, bbox);
 
-                    Emotion emotion = emotionDetector.Detect(detectedFace);
+                        Emotion emotion = emotionDetector.Detect(detectedFace);
 
-                    face.emotion = emotion;
-                });
+                        face.emotion = emotion;
+                    });
+                }
+            });
 
-            }
-
+            drawFaces();
             lastTimeUpdateDetection = (int)(Time.time * 1000);
         }
 
-        drawFaces(matImage);
+        //outputImage.texture = ImageUtils.ConvertMatToTexture(matImage);
     }
 
-    private void drawFaces(Mat matImage)
+    private void drawFaces()
     {
+
         if (faces == null)
         {
             return;
         }
 
+        // Remove all game objects with face tag
+        GameObject[] facesGameObject = GameObject.FindGameObjectsWithTag("Face");
+        foreach (GameObject face in facesGameObject)
+        {
+            Destroy(face);
+        }
+
         foreach (Face face in faces)
         {
-            float x = face.bbox.lt.x;
-            float y = face.bbox.lt.y;
+            float x = face.bbox.lt.x * matToTextureCoordinatesX;
+            float y = face.bbox.lt.y * matToTextureCoordinatesY;
 
-            float width = face.bbox.rb.x - face.bbox.lt.x;
-            float height = face.bbox.rb.y - face.bbox.lt.y;
+            float width = (face.bbox.rb.x - face.bbox.lt.x) * matToTextureCoordinatesX;
+            float height = (face.bbox.rb.y - face.bbox.lt.y) * matToTextureCoordinatesY;
 
+            //Create a UI Game object from a prefab
+            GameObject faceRect = Instantiate(Resources.Load("Prefabs/FaceUI")) as GameObject;
+            faceRect.tag = "Face";
+            faceRect.layer = LayerMask.NameToLayer("UI");
+            faceRect.transform.SetParent(UI.transform, false);
+            RectTransform rt = faceRect.GetComponent<RectTransform>();
+
+            rt.anchoredPosition = new Vector2(x+width/2, y);
+
+            rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
+            rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, height);
+
+            /*
+            GameObject faceRect = new GameObject("FaceRect");
+            faceRect.layer = LayerMask.NameToLayer("UI");
+            faceRect.AddComponent<CanvasRenderer>();
+            faceRect.transform.SetParent(UI.transform, false);
+
+            faceRect.tag = "Face";
             
+
+            RawImage faceImage = faceRect.AddComponent<RawImage>();
+            Texture2D texture = new Texture2D(1, 1);
+            texture.SetPixel(0, 0, UnityEngine.Color.red);
+            texture.Apply();
+            faceImage.texture = texture;
+            */
+
+            // Draw the emotion over the face
+            // if (face.emotion != null)
+            // {
+            //     // draw the emotion icon
+            //     int emotionId = face.emotion.GetEmotion();
+            //     Sprite emotionImage = emotionImages[emotionId];
+            //     faceImage.sprite = emotionImage;
+            // }
+
+            /*
             //Construct a rectangle from the bounding box of face
             Rectangle rect = new Rectangle((int)x, (int)y, (int)width, (int)height);
 
@@ -123,13 +182,13 @@ public class Controller : MonoBehaviour
                 Debug.Log(emotionImageInfo);
                 //CvInvoke.PutText(matImage, face.emotion.GetEmotionText(), new Point((int)x, (int)(y) - 10), FontFace.HersheySimplex, -1, new MCvScalar(0, 0, 255), 2);
             }
+            */
         }
 
         //ImageUtils.ConvertMatToTexture(matImage);
 
         // Print mat dimensions
         //Debug.Log(testImage.Size);
-        outputImage.texture = ImageUtils.ConvertMatToTexture(matImage);
 
         //outputImage.texture = webcam.texture;
         //outputImage.texture = 
