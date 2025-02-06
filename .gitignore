@@ -77,3 +77,8 @@ crashlytics-build.properties
 
 .vsconfig
 .vscode
+
+*.onnx
+
+/[Aa]ssets/TextMesh\ Pro
+/[Aa]ssets/UI\ Toolkit
