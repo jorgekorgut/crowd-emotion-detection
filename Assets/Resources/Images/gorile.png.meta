@@ -147,7 +147,8 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      gorile_0: 4341679898057202314
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

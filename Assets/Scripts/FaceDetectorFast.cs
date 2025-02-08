@@ -85,9 +85,7 @@ namespace FaceDetectorFast
             faceString += $"Confidence: {confidence}\n";
             foreach (Point2D point in landmark.points)
             {
-
                 faceString += $"Landmark: {point.x}, {point.y}\n";
-
             }
             
             if(emotion != null)

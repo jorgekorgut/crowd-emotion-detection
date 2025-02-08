@@ -147,7 +147,8 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      Sadness_0: -4976439595384464731
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

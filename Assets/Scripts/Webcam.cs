@@ -12,6 +12,8 @@ public class Webcam
 
     private bool isFrontCam = false;
 
+    public bool isLoaded = false;
+
     public Webcam()
     {
         WebCamDevice[] devices = WebCamTexture.devices;
@@ -30,6 +32,7 @@ public class Webcam
 
         isFrontCam = devices[0].isFrontFacing;
         texture.Play();
+        isLoaded = true;
         //camAvailable = true;
     }
 

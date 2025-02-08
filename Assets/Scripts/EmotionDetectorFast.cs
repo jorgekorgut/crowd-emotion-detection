@@ -99,7 +99,7 @@ public class EmotionDetector
 
     public Emotion Detect(Mat imageInput)
     {
-        Debug.Log("Detecting Emotion...");
+        //Debug.Log("Detecting Emotion...");
         if (!isLoaded)
         {
             Debug.Log("Model is not loaded.");

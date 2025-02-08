@@ -32,41 +32,61 @@ public static class ImageUtils
 
         return finalImage;
     }
-    public static Mat ConvertWebCamTextureToMat(WebCamTexture frame, DepthType depthType, int nBytePerPixel, int channels)
+    
+    public static Mat ConvertTextureToMat(Texture2D frame, DepthType depthType, int nBytePerPixel, int channels)
     {
         if (frame == null)
         {
             return null;
         }
+
+        //var frameData = new Color32[frame.width * frame.height];
+        Color32[] frameData = frame.GetPixels32();
+        return ConvertTextureToMat(frameData,frame.width, frame.height, depthType, nBytePerPixel, channels);
+    }
+
+    public static Mat ConvertTextureToMat(WebCamTexture frame, DepthType depthType, int nBytePerPixel, int channels)
+    {
+        if (frame == null)
+        {
+            return null;
+        }
+
+        //var frameData = new Color32[frame.width * frame.height];
+        Color32[] frameData = frame.GetPixels32();
+        return ConvertTextureToMat(frameData,frame.width,frame.height,  depthType, nBytePerPixel, channels);
+    }
+
+    public static Mat ConvertTextureToMat(Color32[] frameData, int width, int height, DepthType depthType, int nBytePerPixel, int channels)
+    {
         /*
-                Mat mat = new Mat(frame.height, frame.width, depthType, channels);
-                Color32[] pixels = frame.GetPixels32();
-                byte[] data = new byte[pixels.Length * nBytePerPixel];
-                for (int i = 0; i < pixels.Length; i++)
+            Mat mat = new Mat(frame.height, frame.width, depthType, channels);
+            Color32[] pixels = frame.GetPixels32();
+            byte[] data = new byte[pixels.Length * nBytePerPixel];
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                data[i * nBytePerPixel] = pixels[i].r;
+                data[i * nBytePerPixel + 1] = pixels[i].g;
+                data[i * nBytePerPixel + 2] = pixels[i].b;
+                if (nBytePerPixel == 4)
                 {
-                    data[i * nBytePerPixel] = pixels[i].r;
-                    data[i * nBytePerPixel + 1] = pixels[i].g;
-                    data[i * nBytePerPixel + 2] = pixels[i].b;
-                    if (nBytePerPixel == 4)
-                    {
-                        data[i * nBytePerPixel + 3] = pixels[i].a;
-                    }
+                    data[i * nBytePerPixel + 3] = pixels[i].a;
                 }
-                mat.SetTo(data);
-                return mat;
-                */
+            }
+            mat.SetTo(data);
+            return mat;
+        */
+        Image<Rgba, Byte> img = new Image<Rgba, byte>(width, height);
+
         try
         {
-            Image<Rgba, Byte> img = new Image<Rgba, byte>(frame.width, frame.height);
-            var frameData = new Color32[frame.width * frame.height];
-            frame.GetPixels32(frameData);
-
+            
             // TODO: Slow, find a better way.
-            for (int r = 0; r < frame.height; ++r)
+            for (int r = 0; r < height; ++r)
             {
-                for (int c = 0; c < frame.width; ++c)
+                for (int c = 0; c < width; ++c)
                 {
-                    var pixel = frameData[r * frame.width + c];
+                    var pixel = frameData[r * width + c];
                     img[r, c] = new Rgba(pixel.r, pixel.g, pixel.b, pixel.a);
                 }
             }
