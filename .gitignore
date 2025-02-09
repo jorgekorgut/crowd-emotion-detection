@@ -79,6 +79,8 @@ crashlytics-build.properties
 .vscode
 
 *.onnx
+!mobilevit_va_mtl.onnx
+!yolov11n-face.onnx
 
 /[Aa]ssets/TextMesh\ Pro
 /[Aa]ssets/UI\ Toolkit
