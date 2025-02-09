@@ -44,25 +44,15 @@ public static class FileUtils{
         Sprite[] emotionImages = new Sprite[8];
         for (int i = 0; i < 8; i++)
         {
-            emotionImages[i] = Resources.Load<Sprite>($"EmotionImages/{Emotion.emotions[i]}");
+            string filename = Path.Combine(Application.streamingAssetsPath, "EmotionImages", Emotion.emotions[i] + ".png");
+
+            var rawData = System.IO.File.ReadAllBytes(filename);
+            Texture2D outputImage = new Texture2D(2, 2);
+            outputImage.LoadImage(rawData);
+            Sprite sprite = Sprite.Create(outputImage, new Rect(0, 0, outputImage.width, outputImage.height), new Vector2(0.5f, 0.5f));
+            emotionImages[i] = sprite;
         }
 
         return emotionImages;
-
-        /*
-        Mat[] emotionImages = new Mat[8];
-        for (int i = 0; i < 8; i++)
-        {
-            emotionImages[i] = ImageUtils.LoadJPGToMat($"Assets/Resources/EmotionImages/{Emotion.emotions[i]}.png");
-        }
-
-        // Resize image to be 48x48
-        for (int i = 0; i < 8; i++)
-        {
-            CvInvoke.Resize(emotionImages[i], emotionImages[i], new Size(48, 48));
-        }
-
-        return emotionImages;
-        */
     }
 }

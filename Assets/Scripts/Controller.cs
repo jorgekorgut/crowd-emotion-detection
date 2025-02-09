@@ -63,10 +63,10 @@ public class Controller : MonoBehaviour
         else
         {
             Debug.Log("Webcam not loaded, Loading image from file instead.");
-            //string filename = "Assets/Resources/Images/femme.jpg";
-            //string filename = "Assets/Resources/Images/Student_in_Class_Tulane_University_September_2002.jpg"; // author: https://www.flickr.com/people/28035080@N04
-            //string filename = "Assets/Resources/Images/lots-of-students.jpg"; 
-            //string filename = "Assets/Resources/Images/smiley-class.jpg"; 
+            //string filename = "Images/femme.jpg";
+            //string filename = "Images/Student_in_Class_Tulane_University_September_2002.jpg"; // author: https://www.flickr.com/people/28035080@N04
+            //string filename = "Images/lots-of-students.jpg"; 
+            //string filename = "Images/smiley-class.jpg"; 
             string filename = "Images/smiley-class.jpg"; 
 
             filename = Path.Combine(Application.streamingAssetsPath, filename);

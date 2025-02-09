@@ -84,3 +84,9 @@ crashlytics-build.properties
 
 /[Aa]ssets/TextMesh\ Pro
 /[Aa]ssets/UI\ Toolkit
+
+# Nuget
+Packages\nuget-packages\InstalledPackages
+
+# Android build
+.utmp/*
