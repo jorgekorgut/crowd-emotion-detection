@@ -20,10 +20,11 @@ Florian PAUTRAT
 
 1. Clone the git repository.
 2. Add the directory into Unity Hub.
+3. Launch the Project. (It is normal to have an error at the beginning, since the library folder is not installed yet. Therefore, you should ignore the safemode)
 3. Load the scene in ```Assets/Scenes/SampleScene.unity```
 4. Play the project.
 5. Stop the project.
-6. Import TMP Essentials and TMP Examples & Extra.
+6. Import TMP Essentials.
 7. Play the project.
 
 ## Building Unity Project

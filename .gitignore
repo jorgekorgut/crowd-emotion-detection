@@ -86,7 +86,7 @@ crashlytics-build.properties
 /[Aa]ssets/UI\ Toolkit
 
 # Nuget
-Packages\nuget-packages\InstalledPackages
+Packages/nuget-packages/InstalledPackages
 
 # Android build
 .utmp/*
