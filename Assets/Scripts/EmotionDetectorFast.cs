@@ -15,7 +15,10 @@ using System.IO;
 
 public class Emotion
 {
-    public static string[] emotions = new string[] { "Anger", "Contempt", "Disgust", "Fear", "Happiness", "Neutral", "Sadness", "Surprise" };
+    public static string[] emotions = new string[]      { "Anger", "Contempt", "Disgust", "Fear", "Happiness", "Neutral", "Sadness", "Surprise" };
+    public static float[] emotionsWeights = new float[] { 0.7f   ,  -0.9f    , -0.8f    ,  0.8f , 0.9f       ,  -1f     , -0.7f    , 1f         };
+
+    public static float emotionThreshold = 0.1f;
 
     private float[] emotionScores;
 
@@ -58,6 +61,13 @@ public class Emotion
         return emotions[GetEmotion()];
     }
 
+    public float GetEmotionScore()
+    {
+        float score = emotionsWeights[GetEmotion()];
+
+        return score;
+    }
+
     public float GetValence()
     {
         return valence;
@@ -66,6 +76,16 @@ public class Emotion
     public float GetArousal()
     {
         return arousal;
+    }
+
+    public override string ToString() 
+    {
+        string emotionInfo = "Emotion: " + GetEmotionText() + "\n";
+        for (int i = 0; i < emotionScores.Length; ++i)
+        {
+            emotionInfo += emotions[i] + ": " + emotionScores[i] + "\n";
+        }
+        return emotionInfo;
     }
 }
 
@@ -81,6 +101,7 @@ public class EmotionDetector
 
     public EmotionDetector(string modelPath)
     {
+        modelPath = Path.Combine(Application.streamingAssetsPath, modelPath + ".onnx");
         readNet(modelPath);
     }
 

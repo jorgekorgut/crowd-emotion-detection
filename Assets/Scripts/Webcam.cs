@@ -14,6 +14,8 @@ public class Webcam
 
     public bool isLoaded = false;
 
+    private int deviceId;
+
     public Webcam()
     {
         WebCamDevice[] devices = WebCamTexture.devices;
@@ -23,17 +25,51 @@ public class Webcam
             //camAvailable = false;
             return;
         }
-        texture = new WebCamTexture(devices[0].name, Screen.width, Screen.height);
+
+        deviceId = 0;
+
+        texture = new WebCamTexture(devices[deviceId].name, Screen.width, Screen.height);
         if (texture == null)
         {
             Debug.Log("Unable to open camera");
             return;
         }
 
-        isFrontCam = devices[0].isFrontFacing;
+        isFrontCam = devices[deviceId].isFrontFacing;
         texture.Play();
         isLoaded = true;
         //camAvailable = true;
+    }
+
+    public void SwitchCamera()
+    {
+        // Change camera to frontal or back
+        WebCamDevice[] devices = WebCamTexture.devices;
+        if (devices.Length == 0)
+        {
+            Debug.Log("No camera detected");
+            //camAvailable = false;
+            return;
+        }
+
+        if(devices.Length == 1)
+        {
+            Debug.Log("Only one camera detected");
+            return;
+        }
+
+        deviceId = (deviceId + 1) % devices.Length;
+
+        texture.Stop();
+        texture = new WebCamTexture(devices[deviceId].name, Screen.width, Screen.height);
+        if (texture == null)
+        {
+            Debug.Log("Unable to open camera");
+            return;
+        }
+
+        isFrontCam = devices[deviceId].isFrontFacing;
+        texture.Play();
     }
 
     public void Update()

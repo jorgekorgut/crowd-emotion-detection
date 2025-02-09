@@ -5,6 +5,7 @@ TagManager:
   serializedVersion: 3
   tags:
   - Face
+  - UI
   layers:
   - Default
   - TransparentFX

@@ -158,12 +158,13 @@ namespace FaceDetectorFast
 
         private int paddingX = 20;
         private int paddingY = 20;
-        public FaceDetector(string modelpath, float confThreshold, float nmsThreshold)
+        public FaceDetector(string modelPath, float confThreshold, float nmsThreshold)
         {
             this.confThreshold = confThreshold;
             this.nonMaxSuppressionThreshold = nmsThreshold;
 
-            readNet(modelpath);
+            modelPath = Path.Combine(Application.streamingAssetsPath, modelPath + ".onnx");
+            readNet(modelPath);
         }
 
         private void readNet(string path)

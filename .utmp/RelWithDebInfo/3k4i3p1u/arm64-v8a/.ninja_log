@@ -1,0 +1,23 @@
+# ninja log v5
+2	856	7607918598297722	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	69e00bcd84ac4684
+46	167	7607918591397777	FramePacing/CMakeFiles/swappywrapper.dir/UnitySwappyWrapper.cpp.o	988d047f265e5e22
+168	324	7607918592993112	C:/Users/steh4/Desktop/Passau/crowd-emotion-detection/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/3k4i3p1u/obj/arm64-v8a/libswappywrapper.so	173b848485fa46f2
+40	606	7607918595781910	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	7c8edd801131c812
+16	607	7607918595781563	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	975edd2ba9415a36
+19	560	7607918595296710	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	494ed54906eb0e61
+43	651	7607918596247591	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	4b9d25b866b07c7e
+36	636	7607918596079872	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	939ee0035683fa64
+11	744	7607918597190794	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	28861ae895c086f8
+22	790	7607918597647734	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	f33b63b089a1cbf9
+856	927	7607918599066346	C:/Users/steh4/Desktop/Passau/crowd-emotion-detection/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/3k4i3p1u/obj/arm64-v8a/libgame.so	e7dd5ba8f14d1a3c
+30	150	7607956301046007	FramePacing/CMakeFiles/swappywrapper.dir/UnitySwappyWrapper.cpp.o	988d047f265e5e22
+151	393	7607956303485842	C:/Users/steh4/Desktop/Passau/crowd-emotion-detection/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/3k4i3p1u/obj/arm64-v8a/libswappywrapper.so	173b848485fa46f2
+16	568	7607956305136032	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	7c8edd801131c812
+6	580	7607956305278963	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	975edd2ba9415a36
+8	593	7607956305444459	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	494ed54906eb0e61
+23	624	7607956305787749	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	939ee0035683fa64
+26	662	7607956306147966	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	4b9d25b866b07c7e
+12	726	7607956306789084	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	28861ae895c086f8
+19	800	7607956307516450	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	f33b63b089a1cbf9
+2	902	7607956308536977	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	69e00bcd84ac4684
+902	983	7607956309406321	C:/Users/steh4/Desktop/Passau/crowd-emotion-detection/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/3k4i3p1u/obj/arm64-v8a/libgame.so	e7dd5ba8f14d1a3c
