@@ -41,7 +41,7 @@ public class Webcam
         //camAvailable = true;
     }
 
-    public void SwitchCamera()
+    public WebCamTexture SwitchCamera()
     {
         // Change camera to frontal or back
         WebCamDevice[] devices = WebCamTexture.devices;
@@ -49,13 +49,13 @@ public class Webcam
         {
             Debug.Log("No camera detected");
             //camAvailable = false;
-            return;
+            return null;
         }
 
         if(devices.Length == 1)
         {
             Debug.Log("Only one camera detected");
-            return;
+            return null;
         }
 
         deviceId = (deviceId + 1) % devices.Length;
@@ -65,11 +65,12 @@ public class Webcam
         if (texture == null)
         {
             Debug.Log("Unable to open camera");
-            return;
+            return null;
         }
 
         isFrontCam = devices[deviceId].isFrontFacing;
         texture.Play();
+        return texture;
     }
 
     public void Update()

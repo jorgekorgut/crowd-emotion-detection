@@ -272,7 +272,13 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      nuget_icon_0: 2183575340501399164
+      nuget_icon_1: -7031610565633290887
+      nuget_icon_2: 6490711120838567829
+      nuget_icon_3: -4388335895388062149
+      nuget_icon_4: 8545741352850031493
+      nuget_icon_5: 3176458697642324894
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

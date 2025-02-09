@@ -258,7 +258,9 @@ public class Controller : MonoBehaviour
 
         UIController.transform.Find("ChangeCamera").GetComponent<Button>().onClick.AddListener(() =>
         {
-            webcam.SwitchCamera();
+            outputImage.texture = webcam.SwitchCamera();
+            matToTextureCoordinatesX = (float)outputImage.rectTransform.rect.width / (float)outputImage.texture.width;
+            matToTextureCoordinatesY = (float)outputImage.rectTransform.rect.height / (float)outputImage.texture.height;
         });
     }
 

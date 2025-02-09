@@ -1,11 +1,44 @@
 # Crowd emotion control
 
 ## Participants
+
 Maud HANDRASCHUK  
 Jorge KORGUT Junior  
 Florian PAUTRAT  
 
+## Features
+
+:white_check_mark: Emotions and Facial Tracking  
+
+:white_check_mark: Emotion Score  
+
+:white_check_mark: Predominant emotion
+
+:construction: Emotions Histogram
+
+## Unity Project Install
+
+1. Clone the git repository.
+2. Add the directory into Unity Hub.
+3. Load the scene in ```Assets/Scenes/SampleScene.unity```
+4. Play the project.
+5. Stop the project.
+6. Import TMP Essentials and TMP Examples & Extra.
+7. Play the project.
+
+## Building Unity Project
+
+:white_check_mark: Windows build  
+
+:construction: Android build  
+- Problem with EmguCV. The build is not recognozing the openCV dlls.
+
+:construction: IOS build
+- I dont have an iphone nor an ipad.
+
+
 ## References
+
 - [Hello world Egmu](https://www.emgu.com/wiki/index.php/Hello_World_in_CSharp)  
 - [Face detection Unity](https://github.com/dao-duc-tung/face-detection-unity-emgucv-onnx?tab=readme-ov-file#about-the-project)  
 
