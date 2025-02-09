@@ -2,9 +2,8 @@
 
 ## Participants
 
-Maud HANDRASCHUK  
+Maud ANDRUSZAK  
 Jorge KORGUT Junior  
-Florian PAUTRAT  
 
 ## Features
 
@@ -32,10 +31,10 @@ Florian PAUTRAT
 :white_check_mark: Windows build  
 
 :construction: Android build  
-- Problem with EmguCV. The build is not recognozing the openCV dlls.
+- Problem with EmguCV. The build is not recognizing the openCV dlls.
 
 :construction: IOS build
-- I dont have an iphone nor an ipad.
+- Same problem as with Android.
 
 
 ## References
