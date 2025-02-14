@@ -1,5 +1,7 @@
 # Crowd emotion control
 
+<img src="./Images/project-overview.png" >
+
 ## Participants
 
 Maud ANDRUSZAK  
